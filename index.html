@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards</title>
+<style>
+:root{--bg:#141412;--surface:#1e1e1b;--surface-raised:#272724;--border:#2e2e2b;--border-strong:#3e3e3a;--text:#f0ede8;--text-2:#a8a59f;--text-3:#6a6865;--accent:#3b82f6;--accent-bg:rgba(59,130,246,.15);--accent-text:#93c5fd;--danger:#f87171;--danger-bg:rgba(248,113,113,.12);--danger-border:#7f1d1d;--danger-text:#fca5a5;--warning:#fbbf24;--warning-bg:rgba(251,191,36,.12);--warning-border:#78350f;--warning-text:#fcd34d;--success:#4ade80;--success-bg:rgba(74,222,128,.12);--success-border:#14532d;--success-text:#86efac;--radius:8px;--radius-lg:12px}
+[data-theme=light]{--bg:#f5f5f4;--surface:#fff;--surface-raised:#fff;--border:#e5e3de;--border-strong:#cccac4;--text:#1a1a18;--text-2:#5a5955;--text-3:#9a9894;--accent:#2563eb;--accent-bg:#eff6ff;--accent-text:#1d4ed8;--danger:#dc2626;--danger-bg:#fef2f2;--danger-border:#fca5a5;--danger-text:#b91c1c;--warning:#d97706;--warning-bg:#fffbeb;--warning-border:#fcd34d;--warning-text:#92400e;--success:#16a34a;--success-bg:#f0fdf4;--success-border:#86efac;--success-text:#15803d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh}
+.nav{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:0 24px;height:48px;background:var(--surface);position:sticky;top:0;z-index:10}
+.nav-logo{font-size:15px;font-weight:600;color:var(--text);margin-right:20px;display:flex;align-items:center;gap:7px;user-select:none}
+.nav-tab{padding:0 16px;height:48px;display:flex;align-items:center;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;font-family:inherit}
+.nav-tab.on{color:var(--text);border-bottom-color:var(--text)}
+.nav-tab:hover:not(.on){color:var(--text-2)}
+.nav-spacer{flex:1}
+.nav-count{font-size:12px;color:var(--text-3);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 10px}
+.nav-icon-btn{width:34px;height:34px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-raised);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-2);margin-left:8px;transition:background .1s,color .1s}
+.nav-icon-btn:hover{background:var(--bg);color:var(--text)}
+.page{display:none}.page.active{display:block}
+.deck-page{max-width:800px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:16px}
+.deck-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:150px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);width:15px;height:15px;pointer-events:none}
+.search-wrap input{width:100%;padding:8px 10px 8px 32px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit}
+.search-wrap input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.search-wrap input::placeholder{color:var(--text-3)}
+.tb-btn{padding:8px 14px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:var(--surface);color:var(--text);display:flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit;transition:background .1s}
+.tb-btn:hover{background:var(--bg)}.tb-btn.primary{background:var(--text);color:var(--surface);border-color:transparent}.tb-btn.primary:hover{opacity:.88}.tb-btn:active{transform:scale(.97)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.section-title{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.decks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.deck-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .1s;position:relative}
+.deck-card:hover{border-color:var(--border-strong);background:var(--surface-raised)}
+.deck-card-name{font-size:14px;font-weight:600;margin-bottom:3px;padding-right:22px}
+.deck-card-count{font-size:12px;color:var(--text-3)}
+.deck-card-del{position:absolute;top:10px;right:10px;width:22px;height:22px;border:none;background:none;cursor:pointer;color:var(--text-3);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .1s}
+.deck-card:hover .deck-card-del{opacity:1}.deck-card-del:hover{color:var(--danger-text);background:var(--danger-bg)}
+.no-decks{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;text-align:center;color:var(--text-3);font-size:13px;line-height:1.6}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.table-head{display:grid;grid-template-columns:24px 1fr 1fr 56px;background:var(--bg);border-bottom:1px solid var(--border);padding:0 10px}
+.th{padding:9px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.tr{display:grid;grid-template-columns:24px 1fr 1fr 56px;align-items:center;border-bottom:1px solid var(--border);padding:0 10px;transition:background .1s}
+.tr:last-child{border-bottom:none}.tr:hover{background:var(--bg)}
+.tr input{font-size:13px;padding:8px 6px;background:transparent;border:none;color:var(--text);width:100%;min-width:0;font-family:inherit}
+.tr input:focus{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px;background:var(--surface)}.tr input::placeholder{color:var(--text-3)}
+.score-dot{width:8px;height:8px;border-radius:50%;background:var(--border-strong)}
+.row-acts{display:flex;gap:2px;justify-content:flex-end;opacity:0;transition:opacity .1s}.tr:hover .row-acts{opacity:1}
+.icon-btn{width:28px;height:28px;border:none;background:none;cursor:pointer;color:var(--text-3);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:var(--danger-bg);color:var(--danger-text)}
+.add-row-btn{display:flex;align-items:center;gap:7px;padding:10px 16px;cursor:pointer;color:var(--text-3);font-size:13px;border:none;background:var(--bg);width:100%;border-top:1px solid var(--border);font-family:inherit;transition:color .1s}
+.add-row-btn:hover{color:var(--text)}
+.col-name-inp{width:100%;padding:8px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent;border:none;color:var(--text-3);font-family:inherit;cursor:text}
+.col-name-inp:focus{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px;background:var(--surface);color:var(--text);text-transform:none;letter-spacing:0;font-weight:400}
+.col-name-inp::placeholder{color:var(--text-3)}
+.paste-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.paste-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.paste-head span{font-size:14px;font-weight:500}
+.paste-hint{font-size:12px;color:var(--text-2);padding:10px 16px 4px;line-height:1.6}
+.paste-hint code{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px}
+.paste-body{display:flex;gap:10px;padding:10px 16px 16px}
+.paste-body textarea{flex:1;font-size:13px;font-family:monospace;resize:vertical;min-height:90px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--bg);color:var(--text);padding:8px 10px}
+.paste-body textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}.paste-body textarea::placeholder{color:var(--text-3)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:430px;max-width:calc(100vw - 32px)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:6px}.modal p{font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.6}
+.modal input,.modal textarea{width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;margin-bottom:12px}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-code{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius);padding:12px 14px;font-size:12px;font-family:monospace;word-break:break-all;line-height:1.5;color:var(--text);margin-bottom:8px;max-height:130px;overflow-y:auto}
+.copy-hint{font-size:12px;color:var(--success-text);min-height:18px;margin-bottom:8px}
+.study-outer{min-height:calc(100vh - 49px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px}
+.study-controls{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tog{display:flex;border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden}
+.tog-btn{padding:6px 13px;font-size:12px;border:none;cursor:pointer;background:transparent;color:var(--text-2);display:flex;align-items:center;gap:5px;font-family:inherit;transition:background .1s}
+.tog-btn.on{background:var(--text);color:var(--surface)}.tog-btn:not(.on):hover{background:var(--bg)}
+.ctrl-r{display:flex;gap:6px;align-items:center}
+.sm-btn{padding:6px 11px;font-size:12px;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:var(--surface);color:var(--text-2);display:flex;align-items:center;gap:5px;font-family:inherit}
+.sm-btn:hover{color:var(--text);background:var(--bg)}
+.prog{font-size:12px;color:var(--text-3);white-space:nowrap;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
+.card-area{width:100%;max-width:520px;perspective:1000px;cursor:pointer}
+.card-wrap{width:100%;height:180px;position:relative;transform-style:preserve-3d;transition:transform .42s cubic-bezier(.4,0,.2,1)}
+.card-wrap.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;user-select:none}
+.face.back{transform:rotateY(180deg)}
+.face-tag{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px}
+.face-word{font-size:32px;font-weight:600;color:var(--text);line-height:1.2}
+.face-hint{font-size:12px;color:var(--text-3);margin-top:14px}
+.type-area{width:100%;max-width:520px;display:flex;gap:8px}
+.type-in{flex:1;font-size:15px;padding:10px 13px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.type-in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.type-in.ok{border-color:var(--success);background:var(--success-bg)}.type-in.no{border-color:var(--danger);background:var(--danger-bg)}
+.type-chk{padding:10px 16px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:var(--surface);color:var(--text);font-family:inherit;display:flex;align-items:center;gap:5px}
+.type-chk:hover{background:var(--bg)}
+.type-fb{width:100%;max-width:520px;font-size:13px;min-height:20px}
+.rating-row{width:100%;max-width:520px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.rb{padding:12px 8px;border-radius:var(--radius);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid;font-family:inherit;transition:filter .1s,transform .1s}
+.rb:active{transform:scale(.97)}.rb-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.rb-bad{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text)}
+.rb-ok{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}
+.rb-good{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}
+.rb:hover{filter:brightness(1.15)}
+.pending-msg{font-size:13px;color:var(--text-3);text-align:center;height:62px;display:flex;align-items:center;justify-content:center}
+.legend{font-size:11px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.legend span{display:flex;align-items:center;gap:4px}.ldot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;width:100%;max-width:520px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--border-strong);transition:background .15s}
+.dot.cur{background:var(--text);transform:scale(1.25)}.dot.s-good{background:var(--success)}.dot.s-ok{background:var(--warning)}.dot.s-bad{background:var(--danger)}
+.finish{text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0}
+.finish h3{font-size:20px;font-weight:600}.finish p{font-size:13px;color:var(--text-2);max-width:320px;line-height:1.6}
+.stats-g{display:grid;grid-template-columns:repeat(3,90px);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 8px;text-align:center}
+.stat-n{font-size:24px;font-weight:600}.stat-l{font-size:11px;color:var(--text-3);margin-top:3px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.big-btn{padding:11px 28px;font-size:14px;border-radius:var(--radius);cursor:pointer;background:var(--text);color:var(--surface);border:none;font-family:inherit;font-weight:500;display:flex;align-items:center;gap:7px}
+.big-btn:hover{opacity:.88}
+.empty-study{text-align:center;color:var(--text-3);padding:40px 20px}
+.empty-study svg{width:40px;height:40px;display:block;margin:0 auto 14px;color:var(--border-strong)}
+.empty-study p{font-size:14px;line-height:1.7;color:var(--text-2)}
+.lnk{color:var(--accent-text);cursor:pointer;text-decoration:underline;background:none;border:none;font:inherit}
+</style>
+</head>
+<body data-theme="dark">
+<nav class="nav">
+  <div class="nav-logo">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="11" rx="1"/><rect x="14" y="3" width="8" height="11" rx="1"/><path d="M6 17h12M9 21h6"/></svg>
+    <span id="logo-text"></span>
+  </div>
+  <button class="nav-tab on" id="tab-deck" onclick="showPage('deck')"></button>
+  <button class="nav-tab" id="tab-study" onclick="showPage('study')"></button>
+  <div class="nav-spacer"></div>
+  <span class="nav-count" id="nav-count"></span>
+  <button class="nav-icon-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">
+    <svg id="ti-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg id="ti-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</nav>
+<div class="page active" id="page-deck">
+  <div class="deck-page">
+    <div class="deck-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-inp" oninput="renderTable()">
+      </div>
+      <button class="tb-btn" onclick="togglePaste()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg><span id="lbl-paste"></span></button>
+      <button class="tb-btn" onclick="showShareModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span id="lbl-share"></span></button>
+      <button class="tb-btn" onclick="showImportModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span id="lbl-importcode"></span></button>
+      <button class="tb-btn primary" onclick="showPage('study')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="lbl-study"></span></button>
+    </div>
+    <div>
+      <div class="section-header">
+        <span class="section-title" id="lbl-saved-decks"></span>
+        <div style="display:flex;gap:6px">
+        <button class="tb-btn" onclick="showSaveModal()" style="padding:5px 10px;font-size:12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span id="lbl-save"></span></button>
+        <button id="reset-btn" class="tb-btn" onclick="resetProgress()" style="padding:5px 10px;font-size:12px;display:none;color:var(--danger-text);border-color:var(--danger-border);background:var(--danger-bg)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg><span id="lbl-reset"></span></button>
+      </div>
+      </div>
+      <div id="decks-list"></div>
+    </div>
+    <div>
+      <div class="section-header"><span class="section-title" id="lbl-current-deck"></span></div>
+      <div class="table-wrap">
+        <div class="table-head" style="grid-template-columns:24px 1fr 1fr 56px">
+          <div class="th"></div>
+          <div class="th" style="padding:0"><input id="col-a-inp" class="col-name-inp" placeholder="Side A" oninput="onColNameChange()" /></div>
+          <div class="th" style="padding:0"><input id="col-b-inp" class="col-name-inp" placeholder="Side B" oninput="onColNameChange()" /></div>
+          <div class="th"></div>
+        </div>
+        <div id="table-body"></div>
+        <button class="add-row-btn" onclick="addCard()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span id="lbl-add"></span></button>
+      </div>
+    </div>
+    <div class="paste-panel" id="paste-panel" style="display:none">
+      <div class="paste-head"><span id="lbl-paste-title"></span><button class="icon-btn" onclick="togglePaste()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+      <div class="paste-hint" id="lbl-paste-hint"></div>
+      <div class="paste-body"><textarea id="paste-ta" rows="5"></textarea><button class="tb-btn primary" onclick="doImport()" id="lbl-import-btn"></button></div>
+    </div>
+  </div>
+</div>
+<div class="page" id="page-study"><div class="study-outer" id="study-inner"><div class="empty-study"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><p id="empty-msg"></p></div></div></div>
+<!-- MODALS -->
+<div class="modal-bg" id="modal-save"><div class="modal"><h3 id="ms-title"></h3><p id="ms-desc"></p><input type="text" id="ms-input" maxlength="60"><div class="modal-actions"><button class="tb-btn" onclick="closeModal('modal-save')" id="ms-cancel"></button><button class="tb-btn primary" onclick="confirmSave()" id="ms-confirm"></button></div></div></div>
+<div class="modal-bg" id="modal-share"><div class="modal"><h3 id="msh-title"></h3><p id="msh-desc"></p><div class="modal-code" id="share-code"></div><div class="copy-hint" id="copy-hint"></div><div class="modal-actions"><button class="tb-btn" onclick="closeModal('modal-share')" id="msh-close"></button><button class="tb-btn primary" onclick="copyCode()" id="msh-copy"></button></div></div></div>
+<div class="modal-bg" id="modal-import"><div class="modal"><h3 id="mi-title"></h3><p id="mi-desc"></p><textarea id="mi-input" rows="4" style="width:100%;padding:9px 12px;font-size:12px;font-family:monospace;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px"></textarea><div id="mi-error" style="font-size:12px;color:var(--danger-text);min-height:18px;margin-bottom:8px"></div><div class="modal-actions"><button class="tb-btn" onclick="closeModal('modal-import')" id="mi-cancel"></button><button class="tb-btn primary" onclick="confirmImport()" id="mi-confirm"></button></div></div></div>
+<script>
+const S={
+en:{logo:"Flashcards",deck:"Deck",study:"Study",paste:"Paste list",share:"Share",importcode:"Import code",studybtn:"Study",save:"Save deck",saved_decks:"Saved decks",current:"Current deck",add:"Add word",paste_title:"Paste list",paste_hint:'One pair per line, separated by dash or —. Example: <code>dog — chien</code>',paste_ph:"dog — chien\ncat — chat",import_btn:"Import",col_a:"Side A",col_b:"Side B",dir_ab:"A → B",dir_ba:"B → A",flip:"Flip",type:"Type",restart:"Restart",click_flip:"click to flip",bad:"Bad",ok:"Alright",good:"Perfect",wait_flip:"Flip the card to rate",leg_bad:"Bad ×4",leg_ok:"Alright ×2",leg_good:"Perfect ×1",done:"Round done!",done_sub:"Bad and Alright cards appear more often next round.",next:"Next round",check:"Check",correct:"Correct!",wrong:"Answer:",n:n=>n===1?"1 card":`${n} cards`,search:"Search…",empty:'No cards yet — go to <button class="lnk" onclick="showPage(\'deck\')">Deck</button> to add some.',start:'Hit <button class="lnk" onclick="startStudy()">Start</button> to begin.',save_title:"Save deck",save_desc:"Give your deck a name.",cancel:"Cancel",save_ok:"Save",share_title:"Share deck",share_desc:"Send this code to share your deck. Others paste it with 'Import code'.",share_close:"Close",copy:"Copy code",copied:"Copied!",ic_title:"Import deck code",ic_desc:"Paste a share code to load someone else's deck.",ic_cancel:"Cancel",ic_ok:"Import",ic_err:"Invalid code — make sure you copied the full thing.",no_decks:"No saved decks yet. Click 'Save deck' to save your cards.",del:"Delete",back:"Back",progress_reset:"Reset progress",progress_reset_done:"Progress reset",translating:"Vertalen…",translated:"Vertaald!"},
+nl:{logo:"Woordjes",deck:"Deck",study:"Studeren",paste:"Lijst plakken",share:"Delen",importcode:"Code importeren",studybtn:"Studeren",save:"Deck opslaan",saved_decks:"Opgeslagen decks",current:"Huidig deck",add:"Woord toevoegen",paste_title:"Lijst plakken",paste_hint:'Één paar per regel, gescheiden door streepje of —. Voorbeeld: <code>jeden&nbsp;—&nbsp;één</code>',paste_ph:"jeden — één\ndwa — twee",import_btn:"Importeer",col_a:"Pools",col_b:"Nederlands",dir_ab:"PL → NL",dir_ba:"NL → PL",flip:"Flip",type:"Typ",restart:"Herstart",click_flip:"klik om te draaien",bad:"Slecht",ok:"Gaat wel",good:"Perfect",wait_flip:"Draai de kaart om te beoordelen",leg_bad:"Slecht ×4",leg_ok:"Gaat wel ×2",leg_good:"Perfect ×1",done:"Ronde klaar!",done_sub:"Slechte en matige kaarten komen vaker terug.",next:"Volgende ronde",check:"Check",correct:"Goed!",wrong:"Antwoord:",n:n=>n===1?"1 kaart":`${n} kaarten`,search:"Zoeken…",empty:'Nog geen kaarten — ga naar <button class="lnk" onclick="showPage(\'deck\')">Deck</button>.',start:'Klik op <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Deck opslaan",save_desc:"Geef je deck een naam.",cancel:"Annuleren",save_ok:"Opslaan",share_title:"Deck delen",share_desc:"Stuur deze code om je deck te delen. Anderen plakken hem via 'Code importeren'.",share_close:"Sluiten",copy:"Kopieer code",copied:"Gekopieerd!",ic_title:"Deck code importeren",ic_desc:"Plak een deelcode om een gedeeld deck te laden.",ic_cancel:"Annuleren",ic_ok:"Importeer",ic_err:"Ongeldige code — zorg dat je de volledige code hebt geplakt.",no_decks:"Nog geen opgeslagen decks. Klik op 'Deck opslaan'.",del:"Verwijderen",back:"Terug",progress_reset:"Voortgang wissen",progress_reset_done:"Voortgang gewist",translating:"Übersetzen…",translated:"Übersetzt!"},
+de:{logo:"Vokabeln",deck:"Deck",study:"Lernen",paste:"Liste einfügen",share:"Teilen",importcode:"Code importieren",studybtn:"Lernen",save:"Deck speichern",saved_decks:"Gespeicherte Decks",current:"Aktuelles Deck",add:"Wort hinzufügen",paste_title:"Liste einfügen",paste_hint:'Ein Paar pro Zeile, getrennt durch Bindestrich oder —.',paste_ph:"jeden — eins\ndwa — zwei",import_btn:"Importieren",col_a:"Seite A",col_b:"Seite B",dir_ab:"A → B",dir_ba:"B → A",flip:"Umdrehen",type:"Tippen",restart:"Neu starten",click_flip:"klicken zum Umdrehen",bad:"Schlecht",ok:"OK",good:"Perfekt",wait_flip:"Karte umdrehen zum Bewerten",leg_bad:"Schlecht ×4",leg_ok:"OK ×2",leg_good:"Perfekt ×1",done:"Runde beendet!",done_sub:"Schlechte Karten erscheinen öfter.",next:"Nächste Runde",check:"Prüfen",correct:"Richtig!",wrong:"Antwort:",n:n=>n===1?"1 Karte":`${n} Karten`,search:"Suchen…",empty:'Keine Karten — gehe zu <button class="lnk" onclick="showPage(\'deck\')">Deck</button>.',start:'Klicke auf <button class="lnk" onclick="startStudy()">Starten</button>.',save_title:"Deck speichern",save_desc:"Gib deinem Deck einen Namen.",cancel:"Abbrechen",save_ok:"Speichern",share_title:"Deck teilen",share_desc:"Sende diesen Code zum Teilen.",share_close:"Schließen",copy:"Code kopieren",copied:"Kopiert!",ic_title:"Deck-Code importieren",ic_desc:"Füge einen Code ein, um ein geteiltes Deck zu laden.",ic_cancel:"Abbrechen",ic_ok:"Importieren",ic_err:"Ungültiger Code.",no_decks:"Keine gespeicherten Decks.",del:"Löschen",back:"Zurück",progress_reset:"Fortschritt zurücksetzen",progress_reset_done:"Zurückgesetzt",translating:"Traduction…",translated:"Traduit!"},
+fr:{logo:"Fiches",deck:"Deck",study:"Étudier",paste:"Coller liste",share:"Partager",importcode:"Importer code",studybtn:"Étudier",save:"Sauvegarder",saved_decks:"Decks sauvegardés",current:"Deck actuel",add:"Ajouter mot",paste_title:"Coller liste",paste_hint:'Une paire par ligne, séparée par tiret ou —.',paste_ph:"jeden — un\ndwa — deux",import_btn:"Importer",col_a:"Côté A",col_b:"Côté B",dir_ab:"A → B",dir_ba:"B → A",flip:"Retourner",type:"Taper",restart:"Recommencer",click_flip:"cliquer pour retourner",bad:"Mauvais",ok:"Moyen",good:"Parfait",wait_flip:"Retournez la carte pour noter",leg_bad:"Mauvais ×4",leg_ok:"Moyen ×2",leg_good:"Parfait ×1",done:"Tour terminé!",done_sub:"Les mauvaises cartes reviendront plus souvent.",next:"Tour suivant",check:"Vérifier",correct:"Correct!",wrong:"Réponse:",n:n=>n===1?"1 fiche":`${n} fiches`,search:"Rechercher…",empty:'Pas de cartes — allez dans <button class="lnk" onclick="showPage(\'deck\')">Deck</button>.',start:'Cliquez sur <button class="lnk" onclick="startStudy()">Démarrer</button>.',save_title:"Sauvegarder",save_desc:"Donnez un nom à votre deck.",cancel:"Annuler",save_ok:"Sauvegarder",share_title:"Partager",share_desc:"Envoyez ce code pour partager votre deck.",share_close:"Fermer",copy:"Copier le code",copied:"Copié!",ic_title:"Importer un code",ic_desc:"Collez un code pour charger un deck partagé.",ic_cancel:"Annuler",ic_ok:"Importer",ic_err:"Code invalide.",no_decks:"Aucun deck sauvegardé.",del:"Supprimer",back:"Retour",progress_reset:"Réinitialiser",progress_reset_done:"Réinitialisé",translating:"Traduciendo…",translated:"¡Traducido!"},
+es:{logo:"Tarjetas",deck:"Mazo",study:"Estudiar",paste:"Pegar lista",share:"Compartir",importcode:"Importar código",studybtn:"Estudiar",save:"Guardar mazo",saved_decks:"Mazos guardados",current:"Mazo actual",add:"Añadir palabra",paste_title:"Pegar lista",paste_hint:'Un par por línea, separado por guión o —.',paste_ph:"jeden — uno\ndwa — dos",import_btn:"Importar",col_a:"Lado A",col_b:"Lado B",dir_ab:"A → B",dir_ba:"B → A",flip:"Voltear",type:"Escribir",restart:"Reiniciar",click_flip:"haz clic para voltear",bad:"Mal",ok:"Regular",good:"Perfecto",wait_flip:"Voltea la carta para valorar",leg_bad:"Mal ×4",leg_ok:"Regular ×2",leg_good:"Perfecto ×1",done:"¡Ronda completa!",done_sub:"Las cartas malas aparecerán más.",next:"Siguiente ronda",check:"Comprobar",correct:"¡Correcto!",wrong:"Respuesta:",n:n=>n===1?"1 carta":`${n} cartas`,search:"Buscar…",empty:'Sin cartas — ve a <button class="lnk" onclick="showPage(\'deck\')">Mazo</button>.',start:'Haz clic en <button class="lnk" onclick="startStudy()">Iniciar</button>.',save_title:"Guardar mazo",save_desc:"Dale un nombre a tu mazo.",cancel:"Cancelar",save_ok:"Guardar",share_title:"Compartir mazo",share_desc:"Envía este código para compartir.",share_close:"Cerrar",copy:"Copiar código",copied:"¡Copiado!",ic_title:"Importar código",ic_desc:"Pega un código para cargar un mazo compartido.",ic_cancel:"Cancelar",ic_ok:"Importar",ic_err:"Código inválido.",no_decks:"Sin mazos guardados.",del:"Eliminar",back:"Voltar",progress_reset:"Reiniciar progresso",progress_reset_done:"Reiniciado",back:"Atrás",progress_reset:"Reiniciar progreso",progress_reset_done:"Progreso reiniciado",translating:"Tłumaczenie…",translated:"Przetłumaczono!"},
+pl:{logo:"Fiszki",deck:"Talia",study:"Nauka",paste:"Wklej listę",share:"Udostępnij",importcode:"Importuj kod",studybtn:"Nauka",save:"Zapisz talię",saved_decks:"Zapisane talie",current:"Aktualna talia",add:"Dodaj słowo",paste_title:"Wklej listę",paste_hint:'Jedna para na linię, oddzielona myślnikiem lub —.',paste_ph:"één — jeden\ntwee — dwa",import_btn:"Importuj",col_a:"Strona A",col_b:"Strona B",dir_ab:"A → B",dir_ba:"B → A",flip:"Odwróć",type:"Pisz",restart:"Zacznij od nowa",click_flip:"kliknij, aby odwrócić",bad:"Źle",ok:"Ujdzie",good:"Idealnie",wait_flip:"Odwróć kartę, aby ocenić",leg_bad:"Źle ×4",leg_ok:"Ujdzie ×2",leg_good:"Idealnie ×1",done:"Runda zakończona!",done_sub:"Złe karty pojawią się częściej.",next:"Następna runda",check:"Sprawdź",correct:"Dobrze!",wrong:"Odpowiedź:",n:n=>n===1?"1 karta":`${n} kart`,search:"Szukaj…",empty:'Brak kart — przejdź do <button class="lnk" onclick="showPage(\'deck\')">Talia</button>.',start:'Kliknij <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Zapisz talię",save_desc:"Nadaj nazwę swojej talii.",cancel:"Anuluj",save_ok:"Zapisz",share_title:"Udostępnij talię",share_desc:"Wyślij ten kod, aby udostępnić talię.",share_close:"Zamknij",copy:"Kopiuj kod",copied:"Skopiowano!",ic_title:"Importuj kod talii",ic_desc:"Wklej kod, aby załadować udostępnioną talię.",ic_cancel:"Anuluj",ic_ok:"Importuj",ic_err:"Nieprawidłowy kod.",no_decks:"Brak zapisanych talii.",del:"Usuń",back:"Wstecz",progress_reset:"Resetuj postęp",progress_reset_done:"Postęp zresetowany",translating:"Traduzione…",translated:"Tradotto!"},
+it:{logo:"Schede",deck:"Mazzo",study:"Studiare",paste:"Incolla lista",share:"Condividi",importcode:"Importa codice",studybtn:"Studiare",save:"Salva mazzo",saved_decks:"Mazzi salvati",current:"Mazzo attuale",add:"Aggiungi parola",paste_title:"Incolla lista",paste_hint:'Una coppia per riga, separata da trattino o —.',paste_ph:"jeden — uno\ndwa — due",import_btn:"Importa",col_a:"Lato A",col_b:"Lato B",dir_ab:"A → B",dir_ba:"B → A",flip:"Gira",type:"Scrivi",restart:"Ricomincia",click_flip:"clicca per girare",bad:"Male",ok:"Così così",good:"Perfetto",wait_flip:"Gira la carta per valutare",leg_bad:"Male ×4",leg_ok:"Così così ×2",leg_good:"Perfetto ×1",done:"Turno finito!",done_sub:"Le carte cattive appariranno più spesso.",next:"Prossimo turno",check:"Verifica",correct:"Corretto!",wrong:"Risposta:",n:n=>n===1?"1 scheda":`${n} schede`,search:"Cerca…",empty:'Nessuna scheda — vai al <button class="lnk" onclick="showPage(\'deck\')">Mazzo</button>.',start:'Clicca su <button class="lnk" onclick="startStudy()">Inizia</button>.',save_title:"Salva mazzo",save_desc:"Dai un nome al tuo mazzo.",cancel:"Annulla",save_ok:"Salva",share_title:"Condividi mazzo",share_desc:"Invia questo codice per condividere.",share_close:"Chiudi",copy:"Copia codice",copied:"Copiato!",ic_title:"Importa codice mazzo",ic_desc:"Incolla un codice per caricare un mazzo condiviso.",ic_cancel:"Annulla",ic_ok:"Importa",ic_err:"Codice non valido.",no_decks:"Nessun mazzo salvato.",del:"Elimina",back:"Indietro",progress_reset:"Azzera progressi",progress_reset_done:"Azzerato",translating:"Traduzindo…",translated:"Traduzido!"},
+pt:{logo:"Flashcards",deck:"Baralho",study:"Estudar",paste:"Colar lista",share:"Partilhar",importcode:"Importar código",studybtn:"Estudar",save:"Guardar baralho",saved_decks:"Baralhos guardados",current:"Baralho atual",add:"Adicionar palavra",paste_title:"Colar lista",paste_hint:'Um par por linha, separado por traço ou —.',paste_ph:"jeden — um\ndwa — dois",import_btn:"Importar",col_a:"Lado A",col_b:"Lado B",dir_ab:"A → B",dir_ba:"B → A",flip:"Virar",type:"Escrever",restart:"Recomeçar",click_flip:"clique para virar",bad:"Mau",ok:"Razoável",good:"Perfeito",wait_flip:"Vire a carta para avaliar",leg_bad:"Mau ×4",leg_ok:"Razoável ×2",leg_good:"Perfeito ×1",done:"Ronda terminada!",done_sub:"Cartas más aparecerão mais vezes.",next:"Próxima ronda",check:"Verificar",correct:"Correto!",wrong:"Resposta:",n:n=>n===1?"1 carta":`${n} cartas`,search:"Pesquisar…",empty:'Sem cartas — vá ao <button class="lnk" onclick="showPage(\'deck\')">Baralho</button>.',start:'Clique em <button class="lnk" onclick="startStudy()">Iniciar</button>.',save_title:"Guardar baralho",save_desc:"Dê um nome ao seu baralho.",cancel:"Cancelar",save_ok:"Guardar",share_title:"Partilhar baralho",share_desc:"Envie este código para partilhar.",share_close:"Fechar",copy:"Copiar código",copied:"Copiado!",ic_title:"Importar código",ic_desc:"Cole um código para carregar um baralho partilhado.",ic_cancel:"Cancelar",ic_ok:"Importar",ic_err:"Código inválido.",no_decks:"Sem baralhos guardados.",del:"Eliminar",translating:"Översätter…",translated:"Översatt!"},
+sv:{logo:"Flashkort",deck:"Kortlek",study:"Studera",paste:"Klistra in lista",share:"Dela",importcode:"Importera kod",studybtn:"Studera",save:"Spara kortlek",saved_decks:"Sparade kortlekar",current:"Aktuell kortlek",add:"Lägg till ord",paste_title:"Klistra in lista",paste_hint:'Ett par per rad, separerat med bindestreck eller —.',paste_ph:"jeden — en\ndwa — två",import_btn:"Importera",col_a:"Sida A",col_b:"Sida B",dir_ab:"A → B",dir_ba:"B → A",flip:"Vänd",type:"Skriv",restart:"Börja om",click_flip:"klicka för att vända",bad:"Dålig",ok:"OK",good:"Perfekt",wait_flip:"Vänd kortet för att betygsätta",leg_bad:"Dålig ×4",leg_ok:"OK ×2",leg_good:"Perfekt ×1",done:"Omgången klar!",done_sub:"Dåliga kort visas oftare.",next:"Nästa omgång",check:"Kontrollera",correct:"Rätt!",wrong:"Svar:",n:n=>n===1?"1 kort":`${n} kort`,search:"Sök…",empty:'Inga kort ännu.',start:'Klicka på <button class="lnk" onclick="startStudy()">Starta</button>.',save_title:"Spara kortlek",save_desc:"Ge din kortlek ett namn.",cancel:"Avbryt",save_ok:"Spara",share_title:"Dela kortlek",share_desc:"Skicka denna kod för att dela.",share_close:"Stäng",copy:"Kopiera kod",copied:"Kopierat!",ic_title:"Importera kortlekskod",ic_desc:"Klistra in en kod för att ladda en delad kortlek.",ic_cancel:"Avbryt",ic_ok:"Importera",ic_err:"Ogiltig kod.",no_decks:"Inga sparade kortlekar.",del:"Radera",back:"Tillbaka",progress_reset:"Återställ framsteg",progress_reset_done:"Återställt",translating:"Oversætter…",translated:"Oversat!"},
+da:{logo:"Flashkort",deck:"Kortpakke",study:"Studere",paste:"Indsæt liste",share:"Del",importcode:"Importer kode",studybtn:"Studere",save:"Gem kortpakke",saved_decks:"Gemte kortpakker",current:"Aktuel kortpakke",add:"Tilføj ord",paste_title:"Indsæt liste",paste_hint:'Et par pr. linje, adskilt af bindestreg eller —.',paste_ph:"jeden — en\ndwa — to",import_btn:"Importer",col_a:"Side A",col_b:"Side B",dir_ab:"A → B",dir_ba:"B → A",flip:"Vend",type:"Skriv",restart:"Genstart",click_flip:"klik for at vende",bad:"Dårlig",ok:"OK",good:"Perfekt",wait_flip:"Vend kortet for at bedømme",leg_bad:"Dårlig ×4",leg_ok:"OK ×2",leg_good:"Perfekt ×1",done:"Runde færdig!",done_sub:"Dårlige kort vises oftere.",next:"Næste runde",check:"Tjek",correct:"Korrekt!",wrong:"Svar:",n:n=>n===1?"1 kort":`${n} kort`,search:"Søg…",empty:'Ingen kort endnu.',start:'Klik på <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Gem kortpakke",save_desc:"Giv din kortpakke et navn.",cancel:"Annuller",save_ok:"Gem",share_title:"Del kortpakke",share_desc:"Send denne kode for at dele.",share_close:"Luk",copy:"Kopiér kode",copied:"Kopieret!",ic_title:"Importer kortpakkekode",ic_desc:"Indsæt en kode for at indlæse en delt kortpakke.",ic_cancel:"Annuller",ic_ok:"Importer",ic_err:"Ugyldig kode.",no_decks:"Ingen gemte kortpakker.",del:"Slet",back:"Tilbage",progress_reset:"Nulstil fremskridt",progress_reset_done:"Nulstillet",translating:"Oversetter…",translated:"Oversatt!"},
+no:{logo:"Flashkort",deck:"Kortstokk",study:"Studere",paste:"Lim inn liste",share:"Del",importcode:"Importer kode",studybtn:"Studere",save:"Lagre kortstokk",saved_decks:"Lagrede kortstokker",current:"Gjeldende kortstokk",add:"Legg til ord",paste_title:"Lim inn liste",paste_hint:'Et par per linje, atskilt med bindestrek eller —.',paste_ph:"jeden — én\ndwa — to",import_btn:"Importer",col_a:"Side A",col_b:"Side B",dir_ab:"A → B",dir_ba:"B → A",flip:"Snu",type:"Skriv",restart:"Start på nytt",click_flip:"klikk for å snu",bad:"Dårlig",ok:"OK",good:"Perfekt",wait_flip:"Snu kortet for å vurdere",leg_bad:"Dårlig ×4",leg_ok:"OK ×2",leg_good:"Perfekt ×1",done:"Runde ferdig!",done_sub:"Dårlige kort vises oftere.",next:"Neste runde",check:"Sjekk",correct:"Riktig!",wrong:"Svar:",n:n=>n===1?"1 kort":`${n} kort`,search:"Søk…",empty:'Ingen kort ennå.',start:'Klikk på <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Lagre kortstokk",save_desc:"Gi kortstokken et navn.",cancel:"Avbryt",save_ok:"Lagre",share_title:"Del kortstokk",share_desc:"Send denne koden for å dele.",share_close:"Lukk",copy:"Kopier kode",copied:"Kopiert!",ic_title:"Importer kortstokkode",ic_desc:"Lim inn en kode for å laste en delt kortstokk.",ic_cancel:"Avbryt",ic_ok:"Importer",ic_err:"Ugyldig kode.",no_decks:"Ingen lagrede kortstokker.",del:"Slett",back:"Tilbake",progress_reset:"Tilbakestill fremgang",progress_reset_done:"Tilbakestilt",translating:"Kääntää…",translated:"Käännetty!"},
+fi:{logo:"Flashkortit",deck:"Pakka",study:"Opiskele",paste:"Liitä lista",share:"Jaa",importcode:"Tuo koodi",studybtn:"Opiskele",save:"Tallenna pakka",saved_decks:"Tallennetut pakat",current:"Nykyinen pakka",add:"Lisää sana",paste_title:"Liitä lista",paste_hint:'Yksi pari per rivi, erotettu viivalla tai —.',paste_ph:"jeden — yksi\ndwa — kaksi",import_btn:"Tuo",col_a:"Puoli A",col_b:"Puoli B",dir_ab:"A → B",dir_ba:"B → A",flip:"Käännä",type:"Kirjoita",restart:"Aloita alusta",click_flip:"klikkaa kääntääksesi",bad:"Huono",ok:"Kohtalainen",good:"Täydellinen",wait_flip:"Käännä kortti arvioidaksesi",leg_bad:"Huono ×4",leg_ok:"Kohtalainen ×2",leg_good:"Täydellinen ×1",done:"Kierros valmis!",done_sub:"Huonot kortit näkyvät useammin.",next:"Seuraava kierros",check:"Tarkista",correct:"Oikein!",wrong:"Vastaus:",n:n=>n===1?"1 kortti":`${n} korttia`,search:"Hae…",empty:'Ei kortteja vielä.',start:'Klikkaa <button class="lnk" onclick="startStudy()">Aloita</button>.',save_title:"Tallenna pakka",save_desc:"Anna pakallesi nimi.",cancel:"Peruuta",save_ok:"Tallenna",share_title:"Jaa pakka",share_desc:"Lähetä tämä koodi jakamiseen.",share_close:"Sulje",copy:"Kopioi koodi",copied:"Kopioitu!",ic_title:"Tuo pakkakoodi",ic_desc:"Liitä koodi ladataksesi jaetun pakan.",ic_cancel:"Peruuta",ic_ok:"Tuo",ic_err:"Virheellinen koodi.",no_decks:"Ei tallennettuja pakkoja.",del:"Poista",back:"Takaisin",progress_reset:"Nollaa edistyminen",progress_reset_done:"Nollattu",translating:"Překládání…",translated:"Přeloženo!"},
+cs:{logo:"Kartičky",deck:"Balíček",study:"Studovat",paste:"Vložit seznam",share:"Sdílet",importcode:"Importovat kód",studybtn:"Studovat",save:"Uložit balíček",saved_decks:"Uložené balíčky",current:"Aktuální balíček",add:"Přidat slovo",paste_title:"Vložit seznam",paste_hint:'Jeden pár na řádek, oddělený pomlčkou nebo —.',paste_ph:"jeden — one\ndwa — two",import_btn:"Importovat",col_a:"Strana A",col_b:"Strana B",dir_ab:"A → B",dir_ba:"B → A",flip:"Obrátit",type:"Psát",restart:"Začít znovu",click_flip:"klikněte pro otočení",bad:"Špatně",ok:"Ujde",good:"Perfektně",wait_flip:"Otočte kartu pro hodnocení",leg_bad:"Špatně ×4",leg_ok:"Ujde ×2",leg_good:"Perfektně ×1",done:"Kolo hotovo!",done_sub:"Špatné karty se budou opakovat.",next:"Další kolo",check:"Zkontrolovat",correct:"Správně!",wrong:"Odpověď:",n:n=>n===1?"1 karta":`${n} karet`,search:"Hledat…",empty:'Žádné karty.',start:'Klikněte na <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Uložit balíček",save_desc:"Pojmenujte svůj balíček.",cancel:"Zrušit",save_ok:"Uložit",share_title:"Sdílet balíček",share_desc:"Pošlete tento kód pro sdílení.",share_close:"Zavřít",copy:"Kopírovat kód",copied:"Zkopírováno!",ic_title:"Importovat kód balíčku",ic_desc:"Vložte kód pro načtení sdíleného balíčku.",ic_cancel:"Zrušit",ic_ok:"Importovat",ic_err:"Neplatný kód.",no_decks:"Žádné uložené balíčky.",del:"Smazat",back:"Zpět",progress_reset:"Resetovat pokrok",progress_reset_done:"Resetováno",translating:"Fordítás…",translated:"Lefordítva!"},
+hu:{logo:"Kártyák",deck:"Csomag",study:"Tanulás",paste:"Lista beillesztése",share:"Megosztás",importcode:"Kód importálása",studybtn:"Tanulás",save:"Csomag mentése",saved_decks:"Mentett csomagok",current:"Aktuális csomag",add:"Szó hozzáadása",paste_title:"Lista beillesztése",paste_hint:'Soronként egy pár, kötőjellel vagy — elválasztva.',paste_ph:"jeden — egy\ndwa — kettő",import_btn:"Importálás",col_a:"A oldal",col_b:"B oldal",dir_ab:"A → B",dir_ba:"B → A",flip:"Fordítás",type:"Gépelés",restart:"Újraindítás",click_flip:"kattints a fordításhoz",bad:"Rossz",ok:"Elmegy",good:"Tökéletes",wait_flip:"Fordítsd meg a kártyát",leg_bad:"Rossz ×4",leg_ok:"Elmegy ×2",leg_good:"Tökéletes ×1",done:"Kör vége!",done_sub:"A rossz kártyák többször jelennek meg.",next:"Következő kör",check:"Ellenőrzés",correct:"Helyes!",wrong:"Válasz:",n:n=>n===1?"1 kártya":`${n} kártya`,search:"Keresés…",empty:'Nincs kártya.',start:'Kattints a <button class="lnk" onclick="startStudy()">Kezdés</button> gombra.',save_title:"Csomag mentése",save_desc:"Adj nevet a csomagodnak.",cancel:"Mégse",save_ok:"Mentés",share_title:"Csomag megosztása",share_desc:"Küldd el ezt a kódot megosztáshoz.",share_close:"Bezárás",copy:"Kód másolása",copied:"Másolva!",ic_title:"Csomagkód importálása",ic_desc:"Illeszd be a kódot a megosztott csomag betöltéséhez.",ic_cancel:"Mégse",ic_ok:"Importálás",ic_err:"Érvénytelen kód.",no_decks:"Nincsenek mentett csomagok.",del:"Törlés",back:"Vissza",progress_reset:"Haladás visszaállítása",progress_reset_done:"Visszaállítva",translating:"Se traduce…",translated:"Tradus!"},
+ro:{logo:"Carduri",deck:"Pachet",study:"Studiu",paste:"Lipire listă",share:"Partajare",importcode:"Import cod",studybtn:"Studiu",save:"Salvare pachet",saved_decks:"Pachete salvate",current:"Pachet curent",add:"Adaugă cuvânt",paste_title:"Lipire listă",paste_hint:'O pereche pe linie, separată prin liniuță sau —.',paste_ph:"jeden — unu\ndwa — doi",import_btn:"Importă",col_a:"Partea A",col_b:"Partea B",dir_ab:"A → B",dir_ba:"B → A",flip:"Întoarce",type:"Scrie",restart:"Repornire",click_flip:"clic pentru a întoarce",bad:"Rău",ok:"Acceptabil",good:"Perfect",wait_flip:"Întoarce cardul pentru a evalua",leg_bad:"Rău ×4",leg_ok:"Acceptabil ×2",leg_good:"Perfect ×1",done:"Rundă încheiată!",done_sub:"Cardurile slabe vor apărea mai des.",next:"Runda următoare",check:"Verifică",correct:"Corect!",wrong:"Răspuns:",n:n=>n===1?"1 card":`${n} carduri`,search:"Caută…",empty:'Fără carduri.',start:'Apasă <button class="lnk" onclick="startStudy()">Start</button>.',save_title:"Salvare pachet",save_desc:"Dă un nume pachetului tău.",cancel:"Anulare",save_ok:"Salvare",share_title:"Partajare pachet",share_desc:"Trimite acest cod pentru partajare.",share_close:"Închide",copy:"Copiază codul",copied:"Copiat!",ic_title:"Import cod pachet",ic_desc:"Lipește un cod pentru a încărca un pachet partajat.",ic_cancel:"Anulare",ic_ok:"Importă",ic_err:"Cod invalid.",no_decks:"Niciun pachet salvat.",del:"Șterge",back:"Înapoi",progress_reset:"Resetare progres",progress_reset_done:"Resetat",translating:"Çevriliyor…",translated:"Çevrildi!"},
+tr:{logo:"Kartlar",deck:"Deste",study:"Çalış",paste:"Liste yapıştır",share:"Paylaş",importcode:"Kod içe aktar",studybtn:"Çalış",save:"Desteyi kaydet",saved_decks:"Kaydedilen desteler",current:"Mevcut deste",add:"Kelime ekle",paste_title:"Liste yapıştır",paste_hint:'Her satıra bir çift, tire veya — ile ayrılmış.',paste_ph:"jeden — bir\ndwa — iki",import_btn:"İçe aktar",col_a:"A Tarafı",col_b:"B Tarafı",dir_ab:"A → B",dir_ba:"B → A",flip:"Çevir",type:"Yaz",restart:"Yeniden başla",click_flip:"çevirmek için tıkla",bad:"Kötü",ok:"Fena değil",good:"Mükemmel",wait_flip:"Değerlendirmek için kartı çevir",leg_bad:"Kötü ×4",leg_ok:"Fena değil ×2",leg_good:"Mükemmel ×1",done:"Tur bitti!",done_sub:"Kötü kartlar daha sık çıkar.",next:"Sonraki tur",check:"Kontrol et",correct:"Doğru!",wrong:"Cevap:",n:n=>n===1?"1 kart":`${n} kart`,search:"Ara…",empty:'Henüz kart yok.',start:'<button class="lnk" onclick="startStudy()">Başla</button>\'ya tıkla.',save_title:"Desteyi kaydet",save_desc:"Destene bir ad ver.",cancel:"İptal",save_ok:"Kaydet",share_title:"Desteyi paylaş",share_desc:"Bu kodu paylaşmak için gönder.",share_close:"Kapat",copy:"Kodu kopyala",copied:"Kopyalandı!",ic_title:"Deste kodu içe aktar",ic_desc:"Paylaşılan bir desteyi yüklemek için kod yapıştır.",ic_cancel:"İptal",ic_ok:"İçe aktar",ic_err:"Geçersiz kod.",no_decks:"Kaydedilen deste yok.",del:"Sil",back:"Geri",progress_reset:"İlerlemeyi sıfırla",progress_reset_done:"Sıfırlandı",translating:"Переклад…",translated:"Перекладено!"},
+uk:{logo:"Картки",deck:"Колода",study:"Вчити",paste:"Вставити список",share:"Поділитися",importcode:"Імпорт коду",studybtn:"Вчити",save:"Зберегти колоду",saved_decks:"Збережені колоди",current:"Поточна колода",add:"Додати слово",paste_title:"Вставити список",paste_hint:'Одна пара на рядок, розділена дефісом або —.',paste_ph:"jeden — один\ndwa — два",import_btn:"Імпортувати",col_a:"Сторона A",col_b:"Сторона B",dir_ab:"A → B",dir_ba:"B → A",flip:"Перевернути",type:"Писати",restart:"Почати знову",click_flip:"натисніть, щоб перевернути",bad:"Погано",ok:"Нічого",good:"Ідеально",wait_flip:"Переверніть картку для оцінки",leg_bad:"Погано ×4",leg_ok:"Нічого ×2",leg_good:"Ідеально ×1",done:"Раунд закінчено!",done_sub:"Погані картки з'являться частіше.",next:"Наступний раунд",check:"Перевірити",correct:"Правильно!",wrong:"Відповідь:",n:n=>n===1?"1 картка":`${n} карток`,search:"Пошук…",empty:'Немає карток.',start:'Натисніть <button class="lnk" onclick="startStudy()">Старт</button>.',save_title:"Зберегти колоду",save_desc:"Дайте назву колоді.",cancel:"Скасувати",save_ok:"Зберегти",share_title:"Поділитися колодою",share_desc:"Надішліть цей код для обміну.",share_close:"Закрити",copy:"Копіювати код",copied:"Скопійовано!",ic_title:"Імпорт коду колоди",ic_desc:"Вставте код для завантаження спільної колоди.",ic_cancel:"Скасувати",ic_ok:"Імпортувати",ic_err:"Недійсний код.",no_decks:"Немає збережених колод.",del:"Видалити",back:"Назад",progress_reset:"Скинути прогрес",progress_reset_done:"Скинуто",translating:"Translating…",translated:"Done!"}
+};
+function detectLang(){const ls=navigator.languages||[navigator.language||'en'];for(const l of ls){const c=l.split('-')[0].toLowerCase();if(S[c])return c;}return'en';}
+const lang=detectLang();const T=S[lang]||S.en;
+
+// ── i18n helpers ──────────────────────────────────────────────────────────────
+function applyI18n(){
+  document.title=T.logo;
+  set('logo-text',T.logo);set('tab-deck',T.deck);set('tab-study',T.study);
+  set('lbl-paste',T.paste);set('lbl-share',T.share);set('lbl-importcode',T.importcode);
+  set('lbl-study',T.studybtn);set('lbl-save',T.save);
+  set('lbl-saved-decks',T.saved_decks);set('lbl-current-deck',T.current);
+  set('lbl-add',T.add);set('lbl-paste-title',T.paste_title);
+  html('lbl-paste-hint',T.paste_hint);
+  document.getElementById('paste-ta').placeholder=T.paste_ph;
+  set('lbl-import-btn',T.import_btn);
+  set('lbl-reset',T.progress_reset||'Reset progress');
+  document.getElementById('search-inp').placeholder=T.search;
+  html('empty-msg',T.empty);
+  set('ms-title',T.save_title);set('ms-desc',T.save_desc);
+  set('ms-cancel',T.cancel);set('ms-confirm',T.save_ok);
+  set('msh-title',T.share_title);set('msh-desc',T.share_desc);
+  set('msh-close',T.share_close);set('msh-copy',T.copy);
+  set('mi-title',T.ic_title);set('mi-desc',T.ic_desc);
+  set('mi-cancel',T.ic_cancel);set('mi-confirm',T.ic_ok);
+}
+function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function html(id,v){const e=document.getElementById(id);if(e)e.innerHTML=v;}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme(){
+  const dark=document.body.getAttribute('data-theme')==='dark';
+  document.body.setAttribute('data-theme',dark?'light':'dark');
+  document.getElementById('ti-sun').style.display=dark?'none':'block';
+  document.getElementById('ti-moon').style.display=dark?'block':'none';
+  localStorage.setItem('fc_theme',dark?'light':'dark');
+}
+function initTheme(){
+  const t=localStorage.getItem('fc_theme')||'dark';
+  document.body.setAttribute('data-theme',t);
+  document.getElementById('ti-sun').style.display=t==='dark'?'none':'block';
+  document.getElementById('ti-moon').style.display=t==='dark'?'block':'none';
+}
+
+// ── Language name → ISO code ───────────────────────────────────────────────────
+const LANG_NAME_MAP={
+  english:'en',engels:'en',inglés:'en',anglais:'en',inglese:'en',englisch:'en',angielski:'en',
+  dutch:'nl',nederlands:'nl',hollandais:'nl',néerlandais:'nl',niederländisch:'nl',olandese:'nl',holenderski:'nl',
+  german:'de',deutsch:'de',allemand:'de',tedesco:'de',alemán:'de',duits:'de',niemiecki:'de',
+  french:'fr',français:'fr',Frans:'fr',französisch:'fr',francese:'fr',francés:'fr',francuski:'fr',
+  spanish:'es',español:'es',espagnol:'es',spagnolo:'es',spanisch:'es',spaans:'es',hiszpański:'es',
+  polish:'pl',polski:'pl',polonais:'pl',polacco:'pl',polnisch:'pl',pools:'pl',
+  italian:'it',italiano:'it',italien:'it',italienisch:'it',italiaans:'it',włoski:'it',
+  portuguese:'pt',português:'pt',portugais:'pt',portoghese:'pt',portugiesisch:'pt',portugees:'pt',
+  russian:'ru',swedish:'sv',svenska:'sv',danish:'da',dansk:'da',norwegian:'no',norsk:'no',
+  finnish:'fi',suomi:'fi',czech:'cs',hungarian:'hu',magyar:'hu',romanian:'ro',română:'ro',
+  turkish:'tr',ukrainian:'uk',greek:'el',hebrew:'he',arabic:'ar',chinese:'zh',japanese:'ja',korean:'ko',
+};
+function detectLangCode(name){return LANG_NAME_MAP[name.trim().toLowerCase()]||null;}
+
+let colA='',colB='';
+let translateDebounce=null;
+let lastTranslateA='',lastTranslateB='';
+
+function onColNameChange(){
+  colA=document.getElementById('col-a-inp').value;
+  colB=document.getElementById('col-b-inp').value;
+  clearTimeout(translateDebounce);
+  translateDebounce=setTimeout(tryAutoTranslate,800);
+  updateDirLabels();
+}
+function updateDirLabels(){
+  const a=getColA();const b=getColB();
+  const ab=document.getElementById('dir-ab-btn');
+  const ba=document.getElementById('dir-ba-btn');
+  if(ab)ab.textContent=a+' → '+b;
+  if(ba)ba.textContent=b+' → '+a;
+}
+async function tryAutoTranslate(){
+  const a=colA.trim();const b=colB.trim();
+  if(!a||!b)return;
+  if(a===lastTranslateA&&b===lastTranslateB)return;
+  const srcCode=detectLangCode(a);const tgtCode=detectLangCode(b);
+  if(!srcCode||!tgtCode||srcCode===tgtCode)return;
+  lastTranslateA=a;lastTranslateB=b;
+  const toTranslate=cards.filter(c=>c.a.trim()&&!c.b.trim());
+  if(!toTranslate.length)return;
+  showToast(T.translating||'Translating…');
+  for(const c of toTranslate){
+    try{const result=await translateWord(c.a.trim(),srcCode,tgtCode);if(result)c.b=result;}catch(e){}
+  }
+  renderTable();showToast(T.translated||'Done!',1500);
+}
+async function translateWord(word,src,tgt){
+  const r=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${src}|${tgt}`);
+  if(!r.ok)return null;
+  const j=await r.json();
+  if(j.responseStatus===200&&j.responseData?.translatedText){
+    const t=j.responseData.translatedText;
+    if(t===t.toUpperCase()&&t.length>2)return null;
+    return t;
+  }
+  return null;
+}
+let toastTimer=null;
+function showToast(msg,duration=3000){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:8px 18px;border-radius:20px;font-size:13px;z-index:200;pointer-events:none;transition:opacity .2s';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.style.opacity='0';},duration);
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const SCORE={bad:0,ok:1,good:2};
+const MULT={bad:4,ok:2,good:1};
+
+let cards=[
+  {a:'i',b:'en'},{a:'z',b:'met'},{a:'w',b:'in'},{a:'lub',b:'of'},{a:'do',b:'naar'},
+  {a:'ale',b:'maar'},{a:'nie',b:'niet'},{a:'tak',b:'ja'},{a:'to',b:'dit / dat'},
+  {a:'na',b:'op'},{a:'po',b:'na / na afloop van'},{a:'od',b:'van / vanaf'},
+  {a:'przez',b:'door / via'},{a:'przy',b:'bij'},{a:'o',b:'over / om'},
+  {a:'jeden',b:'één'},{a:'dwa',b:'twee'},{a:'trzy',b:'drie'},{a:'cztery',b:'vier'},
+  {a:'pięć',b:'vijf'},{a:'sześć',b:'zes'},{a:'siedem',b:'zeven'},{a:'osiem',b:'acht'},
+  {a:'dziewięć',b:'negen'},{a:'dziesięć',b:'tien'},
+  {a:'poniedziałek',b:'maandag'},{a:'wtorek',b:'dinsdag'},{a:'środa',b:'woensdag'},
+  {a:'czwartek',b:'donderdag'},{a:'piątek',b:'vrijdag'},{a:'sobota',b:'zaterdag'},
+  {a:'niedziela',b:'zondag'}
+];
+
+// scores is now keyed by direction: scores.ab[cardIndex], scores.ba[cardIndex]
+let scores={ab:{},ba:{}};
+// currentDeckId: null = unsaved, or index into savedDecks
+let currentDeckId=null;
+let savedDecks=JSON.parse(localStorage.getItem('fc_decks')||'[]');
+let queue=[],qi=0,flipped=false,dir='ab',mode='flip';
+let sessionScores={bad:0,ok:0,good:0};
+// History for "back" button: array of {cardIdx, rating}
+let history=[];
+let studyStarted=false;
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function valid(){return cards.filter(c=>c.a.trim()&&c.b.trim());}
+function scoreColor(i){
+  // Color based on combined worst score across both directions
+  const sAB=scores.ab[i];const sBA=scores.ba[i];
+  const vals=[sAB,sBA].filter(v=>v!==undefined);
+  if(!vals.length)return'var(--border-strong)';
+  const worst=Math.min(...vals);
+  return worst===0?'var(--danger)':worst===1?'var(--warning)':'var(--success)';
+}
+function checkAnswer(guess,answer){
+  guess=guess.trim().toLowerCase();
+  const parts=answer.split('/').map(p=>p.trim().toLowerCase());
+  return parts.includes(guess)||guess===parts.join(' / ')||guess===parts.join('/');
+}
+function getColA(){return colA.trim()||T.col_a;}
+function getColB(){return colB.trim()||T.col_b;}
+function currentScores(){return scores[dir];}
+
+// ── Persist progress ──────────────────────────────────────────────────────────
+function persistProgress(){
+  if(currentDeckId===null)return;
+  savedDecks[currentDeckId].scores=JSON.parse(JSON.stringify(scores));
+  localStorage.setItem('fc_decks',JSON.stringify(savedDecks));
+}
+
+// ── Pages ─────────────────────────────────────────────────────────────────────
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('on'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('tab-'+p).classList.add('on');
+  if(p==='study'&&!studyStarted)startStudy();
+  if(p==='deck')renderTable();
+}
+
+// ── Deck ──────────────────────────────────────────────────────────────────────
+function renderDecks(){
+  const el=document.getElementById('decks-list');
+  if(!savedDecks.length){el.innerHTML=`<div class="no-decks">${T.no_decks}</div>`;return;}
+  el.innerHTML=`<div class="decks-grid">${savedDecks.map((d,i)=>{
+    const isActive=i===currentDeckId;
+    const sc=d.scores||{ab:{},ba:{}};
+    const allDirs=[...Object.values(sc.ab||{}),...Object.values(sc.ba||{})];
+    const rated=allDirs.filter(v=>v!==undefined).length;
+    const good=allDirs.filter(v=>v===2).length;
+    const pct=rated?Math.round(good/d.cards.length*100):0;
+    return`<div class="deck-card${isActive?' active-deck':''}" onclick="loadDeck(${i})">
+      <div class="deck-card-name">${esc(d.name)}</div>
+      <div class="deck-card-count">${T.n(d.cards.length)}${rated?` · ${pct}% ${T.good||'perfect'}`:''}  </div>
+      <button class="deck-card-del" onclick="event.stopPropagation();deleteDeck(${i})" title="${T.del}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+  }).join('')}</div>`;
+}
+function renderTable(){
+  const q=(document.getElementById('search-inp').value||'').toLowerCase();
+  const ca=document.getElementById('col-a-inp');const cb=document.getElementById('col-b-inp');
+  if(ca&&!ca.matches(':focus')&&!colA)ca.placeholder=T.col_a;
+  if(cb&&!cb.matches(':focus')&&!colB)cb.placeholder=T.col_b;
+  document.getElementById('table-body').innerHTML=cards.map((c,i)=>{
+    if(q&&!c.a.toLowerCase().includes(q)&&!c.b.toLowerCase().includes(q))return'';
+    return`<div class="tr">
+      <div style="display:flex;align-items:center;justify-content:center"><div class="score-dot" style="background:${scoreColor(i)}"></div></div>
+      <input value="${esc(c.a)}" placeholder="${getColA()}…" oninput="cards[${i}].a=this.value;updateNav()">
+      <input value="${esc(c.b)}" placeholder="${getColB()}…" oninput="cards[${i}].b=this.value;updateNav()">
+      <div class="row-acts"><button class="icon-btn" onclick="removeCard(${i})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></div>
+    </div>`;
+  }).join('');
+  updateNav();
+  updateResetBtn();
+}
+function updateNav(){document.getElementById('nav-count').textContent=T.n(valid().length);}
+function updateResetBtn(){
+  const btn=document.getElementById('reset-btn');
+  if(!btn)return;
+  const hasProgress=Object.keys(scores.ab).length||Object.keys(scores.ba).length;
+  btn.style.display=hasProgress?'flex':'none';
+}
+function addCard(){cards.push({a:'',b:''});renderTable();const inp=document.querySelectorAll('.tr input');inp[inp.length-2]?.focus();}
+function removeCard(i){if(cards.length>1){cards.splice(i,1);delete scores.ab[i];delete scores.ba[i];renderTable();}}
+function togglePaste(){const p=document.getElementById('paste-panel');p.style.display=p.style.display==='none'?'block':'none';if(p.style.display==='block')document.getElementById('paste-ta').focus();}
+function doImport(){
+  const raw=document.getElementById('paste-ta').value.trim();if(!raw)return;
+  raw.split('\n').forEach(l=>{l=l.trim();if(!l)return;const sep=l.includes('\t')?'\t':l.includes('—')?'—':'-';const p=l.split(sep);if(p.length>=2)cards.push({a:p[0].trim(),b:p.slice(1).join(sep).trim()});});
+  document.getElementById('paste-ta').value='';togglePaste();renderTable();
+}
+function resetProgress(){
+  scores={ab:{},ba:{}};history=[];studyStarted=false;
+  persistProgress();renderTable();renderDecks();showToast(T.progress_reset||'Progress reset');
+}
+
+// ── Save / Load ───────────────────────────────────────────────────────────────
+function showSaveModal(){document.getElementById('ms-input').value='';openModal('modal-save');setTimeout(()=>document.getElementById('ms-input').focus(),80);}
+function confirmSave(){
+  const name=document.getElementById('ms-input').value.trim();if(!name)return;
+  // Save with current scores
+  savedDecks.unshift({name,cards:JSON.parse(JSON.stringify(cards)),colA,colB,scores:JSON.parse(JSON.stringify(scores))});
+  currentDeckId=0;
+  localStorage.setItem('fc_decks',JSON.stringify(savedDecks));
+  closeModal('modal-save');renderDecks();
+}
+function loadDeck(i){
+  // Save current progress back to its deck first
+  persistProgress();
+  const d=savedDecks[i];
+  cards=JSON.parse(JSON.stringify(d.cards));
+  // Restore per-direction scores if present
+  scores=d.scores?JSON.parse(JSON.stringify(d.scores)):{ab:{},ba:{}};
+  if(!scores.ab)scores.ab={};if(!scores.ba)scores.ba={};
+  currentDeckId=i;
+  studyStarted=false;history=[];
+  colA=d.colA||'';colB=d.colB||'';
+  const ca=document.getElementById('col-a-inp');const cb=document.getElementById('col-b-inp');
+  if(ca)ca.value=colA;if(cb)cb.value=colB;
+  renderTable();renderDecks();
+}
+function deleteDeck(i){
+  if(currentDeckId===i)currentDeckId=null;
+  else if(currentDeckId>i)currentDeckId--;
+  savedDecks.splice(i,1);
+  localStorage.setItem('fc_decks',JSON.stringify(savedDecks));
+  renderDecks();
+}
+
+// ── Share ─────────────────────────────────────────────────────────────────────
+function encode(c){return btoa(unescape(encodeURIComponent(JSON.stringify(c))));}
+function decode(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))));}catch(e){return null;}}
+function showShareModal(){document.getElementById('share-code').textContent=encode({cards,colA,colB});document.getElementById('copy-hint').textContent='';openModal('modal-share');}
+function copyCode(){navigator.clipboard.writeText(document.getElementById('share-code').textContent).then(()=>{document.getElementById('copy-hint').textContent=T.copied;setTimeout(()=>document.getElementById('copy-hint').textContent='',2200);});}
+function showImportModal(){document.getElementById('mi-input').value='';document.getElementById('mi-error').textContent='';openModal('modal-import');setTimeout(()=>document.getElementById('mi-input').focus(),80);}
+function confirmImport(){
+  const raw=document.getElementById('mi-input').value.trim();
+  const decoded=decode(raw);
+  let importedCards=null,importedColA='',importedColB='';
+  if(Array.isArray(decoded)&&decoded[0]?.a){importedCards=decoded;}
+  else if(decoded?.cards&&Array.isArray(decoded.cards)&&decoded.cards[0]?.a){importedCards=decoded.cards;importedColA=decoded.colA||'';importedColB=decoded.colB||'';}
+  if(!importedCards){document.getElementById('mi-error').textContent=T.ic_err;return;}
+  // Reset progress on import
+  cards=importedCards;scores={ab:{},ba:{}};studyStarted=false;history=[];currentDeckId=null;
+  colA=importedColA;colB=importedColB;
+  const ca=document.getElementById('col-a-inp');const cb=document.getElementById('col-b-inp');
+  if(ca)ca.value=colA;if(cb)cb.value=colB;
+  closeModal('modal-import');renderTable();renderDecks();
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));});
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+document.getElementById('ms-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmSave();});
+
+// ── Queue builder with spacing guarantee ──────────────────────────────────────
+const MIN_GAP=3;
+function buildQueue(){
+  const v=valid();
+  const sc=currentScores();
+  const weighted=[];
+  v.forEach((_,i)=>{
+    const s=sc[i];
+    const times=s===undefined?2:s===0?MULT.bad:s===1?MULT.ok:MULT.good;
+    for(let x=0;x<times;x++)weighted.push(i);
+  });
+  for(let i=weighted.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[weighted[i],weighted[j]]=[weighted[j],weighted[i]];}
+  return spacedShuffle(weighted,MIN_GAP);
+}
+function spacedShuffle(pool,gap){
+  const remaining=[...pool];const result=[];const recentWindow=[];
+  while(remaining.length>0){
+    let placed=false;
+    for(let i=0;i<remaining.length;i++){
+      if(!recentWindow.includes(remaining[i])){
+        result.push(remaining[i]);recentWindow.push(remaining[i]);
+        if(recentWindow.length>gap)recentWindow.shift();
+        remaining.splice(i,1);placed=true;break;
+      }
+    }
+    if(!placed){
+      result.push(remaining[0]);recentWindow.push(remaining[0]);
+      if(recentWindow.length>gap)recentWindow.shift();remaining.splice(0,1);
+    }
+  }
+  return result;
+}
+
+function startStudy(){
+  const v=valid();
+  if(!v.length){document.getElementById('study-inner').innerHTML=`<div class="empty-study"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><p>${T.empty}</p></div>`;return;}
+  studyStarted=true;queue=buildQueue();qi=0;flipped=false;history=[];
+  sessionScores={bad:0,ok:0,good:0};renderStudy();
+}
+
+// ── Study render ──────────────────────────────────────────────────────────────
+const RHTML=()=>`<div class="rating-row">
+  <button class="rb rb-bad" onclick="rate('bad')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="rb-label">${T.bad}</span></button>
+  <button class="rb rb-ok" onclick="rate('ok')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="rb-label">${T.ok}</span></button>
+  <button class="rb rb-good" onclick="rate('good')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="rb-label">${T.good}</span></button>
+</div>`;
+
+function renderStudy(){
+  if(qi>=queue.length){renderFinish();return;}
+  const v=valid();const c=v[queue[qi]];
+  const front=dir==='ab'?c.a:c.b;const back=dir==='ab'?c.b:c.a;
+  const fL=dir==='ab'?getColA():getColB();const bL=dir==='ab'?getColB():getColA();
+  const total=queue.length;
+  const canGoBack=history.length>0;
+  const sc=currentScores();
+  const dots=queue.slice(0,Math.min(total,60)).map((idx,i)=>{
+    let cls='dot';
+    if(i===qi)cls+=' cur';
+    else if(sc[idx]!==undefined)cls+=' s-'+(sc[idx]===0?'bad':sc[idx]===1?'ok':'good');
+    return`<div class="${cls}"></div>`;
+  }).join('');
+  const typeH=mode==='type'?`<div class="type-area"><input class="type-in" id="ti" placeholder="${bL}…" onkeydown="if(event.key==='Enter')chkType()"><button class="type-chk" onclick="chkType()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${T.check}</button></div><div class="type-fb" id="tfb"></div>`:'';
+  const iconFlip=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`;
+  const iconType=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M8 11h8M8 15h5"/></svg>`;
+  const iconBack=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+
+  document.getElementById('study-inner').innerHTML=`
+  <div class="study-controls">
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <div class="tog">
+        <button id="dir-ab-btn" class="tog-btn${dir==='ab'?' on':''}" onclick="setDir('ab')">${getColA()} → ${getColB()}</button>
+        <button id="dir-ba-btn" class="tog-btn${dir==='ba'?' on':''}" onclick="setDir('ba')">${getColB()} → ${getColA()}</button>
+      </div>
+      <div class="tog">
+        <button class="tog-btn${mode==='flip'?' on':''}" onclick="setMode('flip')">${iconFlip} ${T.flip}</button>
+        <button class="tog-btn${mode==='type'?' on':''}" onclick="setMode('type')">${iconType} ${T.type}</button>
+      </div>
+    </div>
+    <div class="ctrl-r">
+      <button class="sm-btn" onclick="goBack()" ${canGoBack?'':'disabled'} style="${canGoBack?'':'opacity:.35;cursor:default'}">${iconBack} ${T.back||'Back'}</button>
+      <button class="sm-btn" onclick="startStudy()">${iconFlip} ${T.restart}</button>
+      <span class="prog">${qi+1} / ${total}</span>
+    </div>
+  </div>
+  <div class="card-area" onclick="flipCard()">
+    <div class="card-wrap${flipped?' flipped':''}" id="cw">
+      <div class="face front"><div class="face-tag">${esc(fL)}</div><div class="face-word">${esc(front)}</div>${mode==='flip'?`<div class="face-hint">${T.click_flip}</div>`:''}</div>
+      <div class="face back"><div class="face-tag">${esc(bL)}</div><div class="face-word">${esc(back)}</div></div>
+    </div>
+  </div>
+  ${typeH}
+  <div id="rating-area">${flipped||mode==='type'?RHTML():`<div class="pending-msg">${T.wait_flip}</div>`}</div>
+  <div class="legend">
+    <span><span class="ldot" style="background:var(--danger)"></span>${T.leg_bad}</span>
+    <span><span class="ldot" style="background:var(--warning)"></span>${T.leg_ok}</span>
+    <span><span class="ldot" style="background:var(--success)"></span>${T.leg_good}</span>
+  </div>
+  <div class="dots">${dots}</div>`;
+  if(mode==='type')document.getElementById('ti')?.focus();
+}
+
+function flipCard(){
+  if(mode!=='flip')return;
+  flipped=!flipped;
+  document.getElementById('cw')?.classList.toggle('flipped',flipped);
+  if(flipped){const ra=document.getElementById('rating-area');if(ra)ra.innerHTML=RHTML();}
+}
+function rate(r){
+  const cardIdx=queue[qi];
+  const prevScore=currentScores()[cardIdx];
+  // Push to history so we can undo
+  history.push({qi,cardIdx,prevScore,dir,sessionBad:sessionScores.bad,sessionOk:sessionScores.ok,sessionGood:sessionScores.good});
+  currentScores()[cardIdx]=SCORE[r];
+  sessionScores[r]++;
+  persistProgress();
+  qi++;flipped=false;
+  renderStudy();
+}
+function goBack(){
+  if(!history.length)return;
+  const h=history.pop();
+  // Restore state
+  qi=h.qi;dir=h.dir;flipped=false;
+  if(h.prevScore===undefined)delete currentScores()[h.cardIdx];
+  else currentScores()[h.cardIdx]=h.prevScore;
+  sessionScores={bad:h.sessionBad,ok:h.sessionOk,good:h.sessionGood};
+  persistProgress();
+  renderStudy();
+  // Sync direction toggle buttons
+  const ab=document.getElementById('dir-ab-btn');const ba=document.getElementById('dir-ba-btn');
+  if(ab)ab.classList.toggle('on',dir==='ab');if(ba)ba.classList.toggle('on',dir==='ba');
+}
+function setDir(d){
+  if(d===dir)return;
+  // Save current scores before switching
+  persistProgress();
+  dir=d;flipped=false;history=[];
+  // Start fresh session for this direction (but keep all scores)
+  sessionScores={bad:0,ok:0,good:0};
+  studyStarted=false;
+  startStudy();
+}
+function setMode(m){mode=m;flipped=false;renderStudy();}
+function chkType(){
+  const v=valid();const c=v[queue[qi]];const ans=dir==='ab'?c.b:c.a;
+  const inp=document.getElementById('ti');const fb=document.getElementById('tfb');
+  if(!inp||!fb||!inp.value.trim())return;
+  if(checkAnswer(inp.value,ans)){
+    inp.className='type-in ok';fb.innerHTML=`<span style="color:var(--success)">✓ ${T.correct}</span>`;
+    setTimeout(()=>{const ra=document.getElementById('rating-area');if(ra)ra.innerHTML=RHTML();},500);
+  } else {
+    inp.className='type-in no';fb.innerHTML=`<span style="color:var(--danger)">✗ ${T.wrong} <strong>${esc(ans)}</strong></span>`;
+    setTimeout(()=>{const ra=document.getElementById('rating-area');if(ra)ra.innerHTML=RHTML();},900);
+  }
+}
+function renderFinish(){
+  document.getElementById('study-inner').innerHTML=`<div class="finish">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+    <h3>${T.done}</h3><p>${T.done_sub}</p>
+    <div class="stats-g">
+      <div class="stat"><div class="stat-n" style="color:var(--danger)">${sessionScores.bad}</div><div class="stat-l">${T.bad}</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--warning)">${sessionScores.ok}</div><div class="stat-l">${T.ok}</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--success)">${sessionScores.good}</div><div class="stat-l">${T.good}</div></div>
+    </div>
+    <button class="big-btn" onclick="startStudy()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> ${T.next}</button>
+  </div>`;}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initTheme();applyI18n();renderDecks();renderTable();
+document.getElementById('col-a-inp').placeholder=T.col_a;
+document.getElementById('col-b-inp').placeholder=T.col_b;
+</script></body></html>
