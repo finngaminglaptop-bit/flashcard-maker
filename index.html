@@ -203,6 +203,61 @@ ro:{logo:"Carduri",deck:"Pachet",study:"Studiu",paste:"Lipire listă",share:"Par
 tr:{logo:"Kartlar",deck:"Deste",study:"Çalış",paste:"Liste yapıştır",share:"Paylaş",importcode:"Kod içe aktar",studybtn:"Çalış",save:"Desteyi kaydet",saved_decks:"Kaydedilen desteler",current:"Mevcut deste",add:"Kelime ekle",paste_title:"Liste yapıştır",paste_hint:'Her satıra bir çift, tire veya — ile ayrılmış.',paste_ph:"jeden — bir\ndwa — iki",import_btn:"İçe aktar",col_a:"A Tarafı",col_b:"B Tarafı",dir_ab:"A → B",dir_ba:"B → A",flip:"Çevir",type:"Yaz",restart:"Yeniden başla",click_flip:"çevirmek için tıkla",bad:"Kötü",ok:"Fena değil",good:"Mükemmel",wait_flip:"Değerlendirmek için kartı çevir",leg_bad:"Kötü ×4",leg_ok:"Fena değil ×2",leg_good:"Mükemmel ×1",done:"Tur bitti!",done_sub:"Kötü kartlar daha sık çıkar.",next:"Sonraki tur",check:"Kontrol et",correct:"Doğru!",wrong:"Cevap:",n:n=>n===1?"1 kart":`${n} kart`,search:"Ara…",empty:'Henüz kart yok.',start:'<button class="lnk" onclick="startStudy()">Başla</button>\'ya tıkla.',save_title:"Desteyi kaydet",save_desc:"Destene bir ad ver.",cancel:"İptal",save_ok:"Kaydet",share_title:"Desteyi paylaş",share_desc:"Bu kodu paylaşmak için gönder.",share_close:"Kapat",copy:"Kodu kopyala",copied:"Kopyalandı!",ic_title:"Deste kodu içe aktar",ic_desc:"Paylaşılan bir desteyi yüklemek için kod yapıştır.",ic_cancel:"İptal",ic_ok:"İçe aktar",ic_err:"Geçersiz kod.",no_decks:"Kaydedilen deste yok.",del:"Sil",back:"Geri",progress_reset:"İlerlemeyi sıfırla",progress_reset_done:"Sıfırlandı",translating:"Переклад…",translated:"Перекладено!"},
 uk:{logo:"Картки",deck:"Колода",study:"Вчити",paste:"Вставити список",share:"Поділитися",importcode:"Імпорт коду",studybtn:"Вчити",save:"Зберегти колоду",saved_decks:"Збережені колоди",current:"Поточна колода",add:"Додати слово",paste_title:"Вставити список",paste_hint:'Одна пара на рядок, розділена дефісом або —.',paste_ph:"jeden — один\ndwa — два",import_btn:"Імпортувати",col_a:"Сторона A",col_b:"Сторона B",dir_ab:"A → B",dir_ba:"B → A",flip:"Перевернути",type:"Писати",restart:"Почати знову",click_flip:"натисніть, щоб перевернути",bad:"Погано",ok:"Нічого",good:"Ідеально",wait_flip:"Переверніть картку для оцінки",leg_bad:"Погано ×4",leg_ok:"Нічого ×2",leg_good:"Ідеально ×1",done:"Раунд закінчено!",done_sub:"Погані картки з'являться частіше.",next:"Наступний раунд",check:"Перевірити",correct:"Правильно!",wrong:"Відповідь:",n:n=>n===1?"1 картка":`${n} карток`,search:"Пошук…",empty:'Немає карток.',start:'Натисніть <button class="lnk" onclick="startStudy()">Старт</button>.',save_title:"Зберегти колоду",save_desc:"Дайте назву колоді.",cancel:"Скасувати",save_ok:"Зберегти",share_title:"Поділитися колодою",share_desc:"Надішліть цей код для обміну.",share_close:"Закрити",copy:"Копіювати код",copied:"Скопійовано!",ic_title:"Імпорт коду колоди",ic_desc:"Вставте код для завантаження спільної колоди.",ic_cancel:"Скасувати",ic_ok:"Імпортувати",ic_err:"Недійсний код.",no_decks:"Немає збережених колод.",del:"Видалити",back:"Назад",progress_reset:"Скинути прогрес",progress_reset_done:"Скинуто",translating:"Translating…",translated:"Done!"}
 };
+
+// ── Cloud sync (Firebase Firestore) ────────────────────────────────────────────
+const firebaseConfig={apiKey:"AIzaSyBhJcLbM8mUqiULgmHUPZwr7so5n3pca8s",authDomain:"flashcard-maker-61023.firebaseapp.com",projectId:"flashcard-maker-61023",storageBucket:"flashcard-maker-61023.firebasestorage.app",messagingSenderId:"880797755117",appId:"1:880797755117:web:d5201d3a4caa8e8ae90ee4"};
+let db=null,fsDoc=null,fsSetDoc=null,fsGetDoc=null,fsServerTimestamp=null;
+const cloudReady=(async()=>{
+  try{
+    const{initializeApp}=await import('https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js');
+    const{getFirestore,doc,setDoc,getDoc,serverTimestamp}=await import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js');
+    const app=initializeApp(firebaseConfig);
+    db=getFirestore(app);fsDoc=doc;fsSetDoc=setDoc;fsGetDoc=getDoc;fsServerTimestamp=serverTimestamp;
+    return true;
+  }catch(e){console.error('Firebase init failed',e);return false;}
+})();
+function genId(len=8){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let s='';for(let i=0;i<len;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+async function saveDeckToCloud(){
+  await cloudReady;
+  if(!db)throw new Error('cloud unavailable');
+  const id=genId();
+  await fsSetDoc(fsDoc(db,'decks',id),{
+    cards:valid(),
+    colA:colA||'',
+    colB:colB||'',
+    createdAt:fsServerTimestamp()
+  });
+  return id;
+}
+async function loadDeckFromCloud(id){
+  await cloudReady;
+  if(!db)return null;
+  const snap=await fsGetDoc(fsDoc(db,'decks',id));
+  if(!snap.exists())return null;
+  const d=snap.data();
+  if(!Array.isArray(d.cards)||!d.cards.length)return null;
+  return{cards:d.cards,colA:d.colA||'',colB:d.colB||''};
+}
+function buildShareUrl(id){return location.origin+location.pathname+'?deck='+id;}
+function extractCloudId(raw){
+  const m=raw.match(/[?&]deck=([A-Za-z0-9]{6,10})/);
+  if(m)return m[1];
+  if(/^[A-Za-z0-9]{6,10}$/.test(raw))return raw;
+  return null;
+}
+async function maybeLoadSharedDeckFromURL(){
+  const id=new URLSearchParams(location.search).get('deck');
+  if(!id)return;
+  window.history.replaceState({},'',location.pathname);
+  try{
+    const data=await loadDeckFromCloud(id);
+    if(data){applyImportedDeck(data.cards,data.colA,data.colB);showPage('deck');showToast(T.copied||'Loaded!');}
+  }catch(e){}
+}
 function detectLang(){const ls=navigator.languages||[navigator.language||'en'];for(const l of ls){const c=l.split('-')[0].toLowerCase();if(S[c])return c;}return'en';}
 const lang=detectLang();const T=S[lang]||S.en;
 
@@ -470,22 +525,45 @@ function deleteDeck(i){
 // ── Share ─────────────────────────────────────────────────────────────────────
 function encode(c){return btoa(unescape(encodeURIComponent(JSON.stringify(c))));}
 function decode(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))));}catch(e){return null;}}
-function showShareModal(){document.getElementById('share-code').textContent=encode({cards,colA,colB});document.getElementById('copy-hint').textContent='';openModal('modal-share');}
+function applyImportedDeck(importedCards,importedColA,importedColB){
+  cards=importedCards;scores={ab:{},ba:{}};studyStarted=false;history=[];currentDeckId=null;
+  colA=importedColA||'';colB=importedColB||'';
+  const ca=document.getElementById('col-a-inp');const cb=document.getElementById('col-b-inp');
+  if(ca)ca.value=colA;if(cb)cb.value=colB;
+  renderTable();renderDecks();
+}
+async function showShareModal(){
+  const codeEl=document.getElementById('share-code');
+  document.getElementById('copy-hint').textContent='';
+  codeEl.textContent='…';
+  openModal('modal-share');
+  try{
+    const id=await saveDeckToCloud();
+    codeEl.textContent=buildShareUrl(id);
+  }catch(e){
+    codeEl.textContent=encode({cards,colA,colB});
+  }
+}
 function copyCode(){navigator.clipboard.writeText(document.getElementById('share-code').textContent).then(()=>{document.getElementById('copy-hint').textContent=T.copied;setTimeout(()=>document.getElementById('copy-hint').textContent='',2200);});}
 function showImportModal(){document.getElementById('mi-input').value='';document.getElementById('mi-error').textContent='';openModal('modal-import');setTimeout(()=>document.getElementById('mi-input').focus(),80);}
-function confirmImport(){
+async function confirmImport(){
   const raw=document.getElementById('mi-input').value.trim();
+  if(!raw)return;
+  document.getElementById('mi-error').textContent='';
+  const cloudId=extractCloudId(raw);
+  if(cloudId){
+    try{
+      const data=await loadDeckFromCloud(cloudId);
+      if(data){applyImportedDeck(data.cards,data.colA,data.colB);closeModal('modal-import');return;}
+    }catch(e){}
+  }
   const decoded=decode(raw);
   let importedCards=null,importedColA='',importedColB='';
   if(Array.isArray(decoded)&&decoded[0]?.a){importedCards=decoded;}
   else if(decoded?.cards&&Array.isArray(decoded.cards)&&decoded.cards[0]?.a){importedCards=decoded.cards;importedColA=decoded.colA||'';importedColB=decoded.colB||'';}
   if(!importedCards){document.getElementById('mi-error').textContent=T.ic_err;return;}
-  // Reset progress on import
-  cards=importedCards;scores={ab:{},ba:{}};studyStarted=false;history=[];currentDeckId=null;
-  colA=importedColA;colB=importedColB;
-  const ca=document.getElementById('col-a-inp');const cb=document.getElementById('col-b-inp');
-  if(ca)ca.value=colA;if(cb)cb.value=colB;
-  closeModal('modal-import');renderTable();renderDecks();
+  applyImportedDeck(importedCards,importedColA,importedColB);
+  closeModal('modal-import');
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -662,6 +740,7 @@ function renderFinish(){
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initTheme();applyI18n();renderDecks();renderTable();
+maybeLoadSharedDeckFromURL();
 document.getElementById('col-a-inp').placeholder=T.col_a;
 document.getElementById('col-b-inp').placeholder=T.col_b;
 </script></body></html>

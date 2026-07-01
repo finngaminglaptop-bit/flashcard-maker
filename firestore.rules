@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /decks/{deckId} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasOnly(['cards', 'colA', 'colB', 'createdAt']) &&
+        request.resource.data.cards is list &&
+        request.resource.data.cards.size() > 0 &&
+        request.resource.data.cards.size() <= 1000 &&
+        request.resource.data.colA is string &&
+        request.resource.data.colA.size() <= 80 &&
+        request.resource.data.colB is string &&
+        request.resource.data.colB.size() <= 80 &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}
