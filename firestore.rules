@@ -15,5 +15,29 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
+
+    match /rooms/{code} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasOnly(['code','game','roomName','private','status','createdAt','settings','maxSeats','players','state']) &&
+        request.resource.data.code == code &&
+        request.resource.data.game is string &&
+        request.resource.data.roomName is string && request.resource.data.roomName.size() <= 60 &&
+        request.resource.data.private is bool &&
+        request.resource.data.status == 'waiting' &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.maxSeats is int &&
+        request.resource.data.maxSeats >= 2 && request.resource.data.maxSeats <= 8 &&
+        request.resource.data.players is map && request.resource.data.players.size() == 1 &&
+        request.resource.data.settings is map &&
+        request.resource.data.state is map;
+      allow update: if
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players','state','status']) &&
+        request.resource.data.players is map &&
+        request.resource.data.players.size() <= resource.data.maxSeats &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+          request.resource.data.status in ['waiting','active','finished']);
+      allow delete: if false;
+    }
   }
 }
