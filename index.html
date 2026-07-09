@@ -33,10 +33,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;f
 .decks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .deck-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .1s;position:relative}
 .deck-card:hover{border-color:var(--border-strong);background:var(--surface-raised)}
-.deck-card-name{font-size:14px;font-weight:600;margin-bottom:3px;padding-right:22px}
+.deck-card-name{font-size:14px;font-weight:600;margin-bottom:3px;padding-right:46px}
 .deck-card-count{font-size:12px;color:var(--text-3)}
 .deck-card-del{position:absolute;top:10px;right:10px;width:22px;height:22px;border:none;background:none;cursor:pointer;color:var(--text-3);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .1s}
 .deck-card:hover .deck-card-del{opacity:1}.deck-card-del:hover{color:var(--danger-text);background:var(--danger-bg)}
+.deck-card-update{position:absolute;top:10px;right:34px;width:22px;height:22px;border:none;background:none;cursor:pointer;color:var(--text-3);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .1s}
+.deck-card:hover .deck-card-update{opacity:1}.deck-card-update:hover{color:var(--accent-text);background:var(--accent-bg)}
 .no-decks{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;text-align:center;color:var(--text-3);font-size:13px;line-height:1.6}
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
 .table-head{display:grid;grid-template-columns:24px 1fr 1fr 56px;background:var(--bg);border-bottom:1px solid var(--border);padding:0 10px}
@@ -154,7 +156,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;f
         <span class="section-title" id="lbl-saved-decks"></span>
         <div style="display:flex;gap:6px">
         <button class="tb-btn" onclick="showSaveModal()" style="padding:5px 10px;font-size:12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span id="lbl-save"></span></button>
-        <button id="update-deck-btn" class="tb-btn" onclick="updateDeck()" style="padding:5px 10px;font-size:12px;display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg><span id="lbl-update-deck"></span></button>
         <button id="reset-btn" class="tb-btn" onclick="confirmResetProgress()" style="padding:5px 10px;font-size:12px;display:none;color:var(--danger-text);border-color:var(--danger-border);background:var(--danger-bg)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg><span id="lbl-reset"></span></button>
       </div>
       </div>
@@ -184,6 +185,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;f
   </div>
 </div>
 <div class="page" id="page-study"><div class="study-outer" id="study-inner"><div class="empty-study"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><p id="empty-msg"></p></div></div></div>
+<div id="version-tag" style="position:fixed;bottom:6px;right:10px;font-size:11px;color:var(--text-3);opacity:.55;pointer-events:none;z-index:5">v1.0.0</div>
 <!-- MODALS -->
 <div class="modal-bg" id="modal-save"><div class="modal"><h3 id="ms-title"></h3><p id="ms-desc"></p><input type="text" id="ms-input" maxlength="60"><div class="modal-actions"><button class="tb-btn" onclick="closeModal('modal-save')" id="ms-cancel"></button><button class="tb-btn primary" onclick="confirmSave()" id="ms-confirm"></button></div></div></div>
 <div class="modal-bg" id="modal-share"><div class="modal"><h3 id="msh-title"></h3><p id="msh-desc"></p><div class="modal-code" id="share-code"></div><div class="copy-hint" id="copy-hint"></div><div class="modal-actions"><button class="tb-btn" onclick="closeModal('modal-share')" id="msh-close"></button><button class="tb-btn primary" onclick="copyCode()" id="msh-copy"></button></div></div></div>
@@ -289,7 +291,6 @@ function applyI18n(){
   set('mi-title',T.ic_title);set('mi-desc',T.ic_desc);
   set('mi-cancel',T.ic_cancel);set('mi-confirm',T.ic_ok);
   set('cf-cancel',T.cancel);set('cf-confirm',T.confirm_yes||'Yes');
-  set('lbl-update-deck',T.update_deck||'Update deck');
 }
 function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 function html(id,v){const e=document.getElementById(id);if(e)e.innerHTML=v;}
@@ -454,8 +455,6 @@ function showPage(p){
 
 // ── Deck ──────────────────────────────────────────────────────────────────────
 function renderDecks(){
-  const updateBtn=document.getElementById('update-deck-btn');
-  if(updateBtn)updateBtn.style.display=currentDeckId!==null?'flex':'none';
   const el=document.getElementById('decks-list');
   if(!savedDecks.length){el.innerHTML=`<div class="no-decks">${T.no_decks}</div>`;return;}
   el.innerHTML=`<div class="decks-grid">${savedDecks.map((d,i)=>{
@@ -468,6 +467,9 @@ function renderDecks(){
     return`<div class="deck-card${isActive?' active-deck':''}" onclick="loadDeck(${i})">
       <div class="deck-card-name">${esc(d.name)}</div>
       <div class="deck-card-count">${T.n(d.cards.length)}${rated?` · ${pct}% ${T.good||'perfect'}`:''}  </div>
+      ${isActive?`<button class="deck-card-update" onclick="event.stopPropagation();updateDeck()" title="${T.update_deck||'Update deck'}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+      </button>`:''}
       <button class="deck-card-del" onclick="event.stopPropagation();confirmDeleteDeck(${i})" title="${T.del}">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
