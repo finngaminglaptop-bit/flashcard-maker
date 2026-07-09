@@ -39,5 +39,21 @@ service cloud.firestore {
           request.resource.data.status in ['waiting','active','finished']);
       allow delete: if false;
     }
+
+    // Used by the Cleaning Schedule app's "House Code" household sharing.
+    match /households/{code} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasOnly(['code','createdAt','tasks','completions']) &&
+        request.resource.data.code == code &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.tasks is list && request.resource.data.tasks.size() <= 500 &&
+        request.resource.data.completions is map;
+      allow update: if
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tasks','completions']) &&
+        request.resource.data.tasks is list && request.resource.data.tasks.size() <= 500 &&
+        request.resource.data.completions is map;
+      allow delete: if false;
+    }
   }
 }
